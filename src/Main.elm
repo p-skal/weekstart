@@ -7,10 +7,10 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Json.Decode as Decode exposing (Value)
 import Page exposing (Page)
-import Page.Home as Home
 import Page.Login as Login
 import Page.Month as Month
 import Page.NotFound as NotFound
+import Page.Week as Week
 import Route exposing (Route)
 import Session exposing (Session)
 import Url exposing (Url)
@@ -18,7 +18,7 @@ import Viewer exposing (Viewer)
 
 
 type Model
-    = Home Home.Model
+    = Week Week.Model
     | Login Login.Model
     | Month Month.Model
     | NotFound Session
@@ -58,8 +58,8 @@ view model =
         NotFound _ ->
             viewPage Page.Other (\_ -> Ignored) NotFound.view
 
-        Home home ->
-            viewPage Page.Home GotHomeMsg (Home.view home)
+        Week week ->
+            viewPage Page.Week GotWeekMsg (Week.view week)
 
         Login login ->
             viewPage Page.Other GotLoginMsg (Login.view login)
@@ -77,7 +77,7 @@ type Msg
     | ChangedRoute (Maybe Route)
     | ChangedUrl Url
     | ClickedLink Browser.UrlRequest
-    | GotHomeMsg Home.Msg
+    | GotWeekMsg Week.Msg
     | GotLoginMsg Login.Msg
     | GotMonthMsg Month.Msg
     | GotSession Session
@@ -92,8 +92,8 @@ toSession page =
         NotFound session ->
             session
 
-        Home home ->
-            Home.toSession home
+        Week week ->
+            Week.toSession week
 
         Login login ->
             Login.toSession login
@@ -113,11 +113,11 @@ changeRouteTo maybeRoute model =
             ( NotFound session, Cmd.none )
 
         Just Route.Root ->
-            ( model, Route.replaceUrl (Session.navKey session) Route.Home )
+            ( model, Route.replaceUrl (Session.navKey session) Route.Week )
 
-        Just Route.Home ->
-            Home.init session
-                |> updateWith Home GotHomeMsg model
+        Just Route.Week ->
+            Week.init session
+                |> updateWith Week GotWeekMsg model
 
         Just Route.Login ->
             Login.init session
@@ -165,9 +165,9 @@ update msg model =
         ( ChangedRoute route, _ ) ->
             changeRouteTo route model
 
-        ( GotHomeMsg subMsg, Home home ) ->
-            Home.update subMsg home
-                |> updateWith Home GotHomeMsg model
+        ( GotWeekMsg subMsg, Week week ) ->
+            Week.update subMsg week
+                |> updateWith Week GotWeekMsg model
 
         ( GotLoginMsg subMsg, Login login ) ->
             Login.update subMsg login
@@ -202,8 +202,8 @@ subscriptions model =
         Redirect _ ->
             Session.changes GotSession (Session.navKey (toSession model))
 
-        Home home ->
-            Sub.map GotHomeMsg (Home.subscriptions home)
+        Week week ->
+            Sub.map GotWeekMsg (Week.subscriptions week)
 
         Login login ->
             Sub.map GotLoginMsg (Login.subscriptions login)

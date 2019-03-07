@@ -4,9 +4,11 @@ $red: #be2623;
 
 ::selection {background: $mainDark !important; color: $mainLight;}
 
+
 html {
     height: 100%;
 }
+
 
 body {
     margin: 0;
@@ -76,7 +78,7 @@ input {
 inputgroup {
     position: relative;
     display: block;
-    transition: .2s margin ease;       
+    transition: .2s margin ease;
     margin-top: .5rem;
     &:first-child {
         margin-top: 0;
@@ -114,7 +116,7 @@ inputgroup label {
 
 /* Change Autocomplete styles in Chrome*/
 input:-webkit-autofill,
-input:-webkit-autofill:hover, 
+input:-webkit-autofill:hover,
 input:-webkit-autofill:focus
 textarea:-webkit-autofill,
 textarea:-webkit-autofill:hover
@@ -202,8 +204,19 @@ ul.nav {
         &.nav-trigger {
             display: none;
         }
+
         &.active {
             button {
+            //    background: #f8f6ef;
+            color: $mainLight;
+            background-color: $mainDark;
+            border-bottom: 2px solid $mainDark;
+            }
+        }
+        &.today {
+            button {
+                color: $mainDark;
+                box-shadow: none;
                 background: #f8f6ef;
                 border: 1px solid $mainDark;
                 border-bottom-width: 2px;
@@ -252,14 +265,6 @@ ul.task-list {
     }
 }
 
-.week-grid {
-    grid-template-columns: auto auto auto auto;
-    grid-template-rows: minmax(18rem, max-content) minmax(18rem, max-content);
-}
-.month-grid {
-    grid-template-columns: auto auto auto auto auto auto auto;
-    grid-template-rows: minmax(8rem, max-content) minmax(8rem, max-content) minmax(8rem, max-content) minmax(8rem, max-content) minmax(8rem, max-content);
-}
 .grid {
     display: grid;
     grid-gap: 1px;
@@ -271,6 +276,9 @@ ul.task-list {
         background-color: $mainLight;
         position: relative;
         transition: .2s background-color ease;
+        &.grid-header {
+
+        }
         .day {
             display: flex;
             font-weight: 500;
@@ -301,8 +309,8 @@ ul.task-list {
             }
         }
         inputgroup {
-        
-    
+
+
             input {
                 padding-left: 0;
                 &:active, &:focus {
@@ -310,6 +318,36 @@ ul.task-list {
                     margin-top: .5rem;
                 }
             }
+        }
+    }
+}
+
+
+.week-grid {
+    grid-template-columns: auto auto auto auto;
+    grid-template-rows: minmax(18rem, max-content) minmax(18rem, max-content);
+}
+.month-grid {
+    grid-template-columns: auto auto auto auto auto auto auto;
+    grid-template-rows: minmax(3rem, max-content) minmax(8rem, max-content) minmax(8rem, max-content) minmax(8rem, max-content) minmax(8rem, max-content);
+    .grid-day {
+        font-size: .8rem;
+        &.today {
+            .day {
+                display: initial;
+                padding: .25rem .5rem;
+                text-align: center;
+                border-radius: 100%;
+                color: #eae8dc;
+                background: #0e3746;
+            }
+        }
+    }
+    .grid-header {
+        justify-content: left;
+        padding: 1rem;
+        .day {
+            font-weight: 700;
         }
     }
 }
@@ -363,7 +401,7 @@ ul.task-list {
         .page-title {
             margin-bottom: 0;
             h1 {
-                font-size: 2.5rem;  
+                font-size: 2.5rem;
             }
         }
     }

@@ -182,7 +182,7 @@ update msg model =
 
         GotSession session ->
             ( { model | session = session }
-            , Route.replaceUrl (Session.navKey session) Route.Home
+            , Route.replaceUrl (Session.navKey session) Route.Week
             )
 
 

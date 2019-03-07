@@ -19,7 +19,7 @@ under Other.
 -}
 type Page
     = Other
-    | Home
+    | Week
     | Month
 
 
@@ -42,10 +42,10 @@ viewHeader : Page -> Maybe Viewer -> Html msg
 viewHeader page maybeViewer =
     nav [ class "navbar navbar-light" ]
         [ div [ class "container" ]
-            [ a [ class "navbar-brand", Route.href Route.Home ]
+            [ a [ class "navbar-brand", Route.href Route.Week ]
                 [ text "WeekStart" ]
             , ul [ class "nav navbar-nav pull-xs-right" ] <|
-                navbarLink page Route.Home [ text "Home" ]
+                navbarLink page Route.Week [ text "Week" ]
                     :: viewMenu page maybeViewer
             ]
         ]
@@ -66,7 +66,7 @@ viewMenu page maybeViewer =
                 avatar =
                     Viewer.avatar viewer
             in
-            [ linkTo Route.Home [ i [ class "ion-compose" ] [], text "\u{00A0}Home" ]
+            [ linkTo Route.Week [ i [ class "ion-compose" ] [], text "\u{00A0}Week" ]
             ]
 
         Nothing ->
@@ -80,14 +80,14 @@ viewFooter page =
     footer []
         [ div [ class "wrapper" ]
             [ div [ class "footer" ]
-                [ a [ class "logo-font", Route.href Route.Home, style "marginRight" ".25rem" ] [ text "WeekStart " ]
+                [ a [ class "logo-font", Route.href Route.Week, style "marginRight" ".25rem" ] [ text "WeekStart " ]
                 , span [ class "attribution" ]
                     [ text " • Made by "
                     , a [ href "https://peter-s.now.sh" ] [ text "Peter S." ]
                     ]
                 , div [ class "footer-links" ]
-                    [ if page /= Home then
-                        a [ class "btn btn-primary", Route.href Route.Home ] [ text "My Weekly Brief ", i [ class "fas fa-calendar-alt", style "marginLeft" ".25rem" ] [] ]
+                    [ if page /= Week then
+                        a [ class "btn btn-primary", Route.href Route.Week ] [ text "My Weekly Brief ", i [ class "fas fa-calendar-alt", style "marginLeft" ".25rem" ] [] ]
 
                       else
                         a [ class "btn btn-primary", Route.href Route.Month ] [ text "My Monthly Brief ", i [ class "fas fa-calendar-alt", style "marginLeft" ".25rem" ] [] ]
@@ -106,7 +106,7 @@ navbarLink page route linkContent =
 isActive : Page -> Route -> Bool
 isActive page route =
     case ( page, route ) of
-        ( Home, Route.Home ) ->
+        ( Week, Route.Week ) ->
             True
 
         _ ->

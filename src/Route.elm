@@ -13,7 +13,7 @@ import Username exposing (Username)
 
 
 type Route
-    = Home
+    = Week
     | Root
     | Login
     | Month
@@ -22,7 +22,7 @@ type Route
 parser : Parser (Route -> a) a
 parser =
     oneOf
-        [ Parser.map Home Parser.top
+        [ Parser.map Week Parser.top
         , Parser.map Login (s "login")
         , Parser.map Month (s "calendar")
         ]
@@ -60,7 +60,7 @@ routeToString page =
     let
         pieces =
             case page of
-                Home ->
+                Week ->
                     []
 
                 Root ->

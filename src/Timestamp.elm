@@ -1,4 +1,4 @@
-module Timestamp exposing (format, formatSlashes, getMonth,getDay, view)
+module Timestamp exposing (daysInMonth, format, formatSlashes, getDay, getFullMonth, getMonth, getMonthFromNumber, getMonthNumber, toMonth, view)
 
 import Html exposing (Html, span, text)
 import Html.Attributes exposing (class)
@@ -126,6 +126,51 @@ formatSlashes zone time =
     day ++ "/" ++ month ++ "/" ++ year
 
 
+toMonth : Time.Zone -> Time.Posix -> Int
+toMonth zone time =
+    getMonthNumber (Time.toMonth zone time)
+
+
+getMonthNumber : Month -> Int
+getMonthNumber month =
+    case month of
+        Jan ->
+            1
+
+        Feb ->
+            2
+
+        Mar ->
+            3
+
+        Apr ->
+            4
+
+        May ->
+            5
+
+        Jun ->
+            6
+
+        Jul ->
+            7
+
+        Aug ->
+            8
+
+        Sep ->
+            9
+
+        Oct ->
+            10
+
+        Nov ->
+            11
+
+        Dec ->
+            12
+
+
 getDay : Weekday -> String
 getDay weekday =
     case weekday of
@@ -189,3 +234,132 @@ getMonth month =
 
         Dec ->
             "Dec"
+
+
+getMonthFromNumber : Int -> Month
+getMonthFromNumber monthNumber =
+    case monthNumber of
+        1 ->
+            Jan
+
+        2 ->
+            Feb
+
+        3 ->
+            Mar
+
+        4 ->
+            Apr
+
+        5 ->
+            May
+
+        6 ->
+            Jun
+
+        7 ->
+            Jul
+
+        8 ->
+            Aug
+
+        9 ->
+            Sep
+
+        10 ->
+            Oct
+
+        11 ->
+            Nov
+
+        _ ->
+            Dec
+
+
+getFullMonth : Month -> String
+getFullMonth month =
+    case month of
+        Jan ->
+            "January"
+
+        Feb ->
+            "February"
+
+        Mar ->
+            "March"
+
+        Apr ->
+            "April"
+
+        May ->
+            "May"
+
+        Jun ->
+            "June"
+
+        Jul ->
+            "July"
+
+        Aug ->
+            "August"
+
+        Sep ->
+            "September"
+
+        Oct ->
+            "October"
+
+        Nov ->
+            "November"
+
+        Dec ->
+            "December"
+
+
+daysInMonth : Month -> Int -> Int
+daysInMonth month year =
+    case month of
+        Jan ->
+            31
+
+        Feb ->
+            if isLeapYear year then
+                29
+
+            else
+                28
+
+        Mar ->
+            31
+
+        Apr ->
+            30
+
+        May ->
+            31
+
+        Jun ->
+            30
+
+        Jul ->
+            31
+
+        Aug ->
+            31
+
+        Sep ->
+            30
+
+        Oct ->
+            31
+
+        Nov ->
+            30
+
+        Dec ->
+            31
+
+
+isLeapYear : Int -> Bool
+isLeapYear y =
+    remainderBy 400 y == 0 || remainderBy 100 y /= 0 && remainderBy 4 y == 0
