@@ -1,5 +1,6 @@
-module Timestamp exposing (daysInMonth, format, formatSlashes, getDay, getFullMonth, getMonth, getMonthFromNumber, getMonthNumber, toMonth, view)
+module Timestamp exposing (daysInMonth, format, formatSlashes, getDay, getFullMonth, getMonth, getMonthFromNumber, getMonthNumber, getNextMonth, getNextMonthTime, getPrevMonth, getPrevMonthTime, toMonth, view)
 
+import Derberos.Date.Calendar as Calendar
 import Html exposing (Html, span, text)
 import Html.Attributes exposing (class)
 import Json.Decode as Decode exposing (Decoder, fail, succeed)
@@ -363,3 +364,55 @@ daysInMonth month year =
 isLeapYear : Int -> Bool
 isLeapYear y =
     remainderBy 400 y == 0 || remainderBy 100 y /= 0 && remainderBy 4 y == 0
+
+
+
+-- NEXT AND PREV MONTHS
+
+
+getNextMonthTime : Time.Zone -> Time.Posix -> Time.Posix
+getNextMonthTime timeZone timeNow =
+    let
+        last =
+            Calendar.getLastDayOfMonth timeZone timeNow
+    in
+    Time.posixToMillis last
+        + 24
+        * 60
+        * 60
+        * 1000
+        |> Time.millisToPosix
+        |> Calendar.getFirstDayOfMonth timeZone
+
+
+getNextMonth : Time.Zone -> Time.Posix -> ( Weekday, Month )
+getNextMonth timeZone timeNow =
+    let
+        next =
+            getNextMonthTime timeZone timeNow
+    in
+    ( Time.toWeekday timeZone next, Time.toMonth timeZone next )
+
+
+getPrevMonthTime : Time.Zone -> Time.Posix -> Time.Posix
+getPrevMonthTime timeZone timeNow =
+    let
+        first =
+            Calendar.getFirstDayOfMonth timeZone timeNow
+    in
+    Time.posixToMillis first
+        - 24
+        * 60
+        * 60
+        * 1000
+        |> Time.millisToPosix
+        |> Calendar.getFirstDayOfMonth timeZone
+
+
+getPrevMonth : Time.Zone -> Time.Posix -> ( Weekday, Month )
+getPrevMonth timeZone timeNow =
+    let
+        prev =
+            getPrevMonthTime timeZone timeNow
+    in
+    ( Time.toWeekday timeZone prev, Time.toMonth timeZone prev )

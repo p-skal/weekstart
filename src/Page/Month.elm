@@ -19,6 +19,7 @@ type alias Model =
     , timeNow : Time.Posix
     , timeZone : Time.Zone
     , viewMonth : Time.Month
+    , viewMonthDayPosixTimes : List Time.Posix
     , viewYear : Int
     }
 
@@ -37,6 +38,7 @@ init session =
       , timeNow = Time.millisToPosix 0
       , timeZone = Time.customZone 660 []
       , viewMonth = Time.Jan
+      , viewMonthDayPosixTimes = []
       , viewYear = 1970
       }
     , Cmd.batch
@@ -57,12 +59,70 @@ view model =
             Time.toDay model.timeZone model.timeNow
 
         firstDayMonth =
-            Calendar.getFirstDayOfMonth model.timeZone model.timeNow
-                |> Time.toWeekday model.timeZone
+            case List.head model.viewMonthDayPosixTimes of
+                Just list ->
+                    list
 
-        _ =
-            Debug.log "1st day month"
-                (Calendar.getCurrentWeekDates model.timeZone model.timeNow)
+                _ ->
+                    Time.millisToPosix 0
+
+        firstDayMonthNumber =
+            Time.toDay model.timeZone firstDayMonth
+
+        {- first =
+               Calendar.getFirstDayOfMonth model.timeZone model.timeNow
+
+           last =
+               Calendar.getLastDayOfMonth model.timeZone model.timeNow
+
+           prev =
+               Time.posixToMillis first
+                   - 24
+                   * 60
+                   * 60
+                   * 1000
+                   |> Time.millisToPosix
+                   |> Calendar.getFirstDayOfMonth model.timeZone
+
+           next =
+               Time.posixToMillis last
+                   + 24
+                   * 60
+                   * 60
+                   * 1000
+                   |> Time.millisToPosix
+                   |> Calendar.getFirstDayOfMonth model.timeZone
+        -}
+        monthPrevNext preDayPosix =
+            (String.fromInt <|
+                Time.toHour model.timeZone <|
+                    preDayPosix
+            )
+                ++ ":"
+                ++ (String.fromInt <|
+                        Time.toMinute model.timeZone <|
+                            preDayPosix
+                   )
+                ++ " "
+                ++ (Timestamp.getDay <|
+                        Time.toWeekday model.timeZone <|
+                            preDayPosix
+                   )
+                ++ " "
+                ++ (String.fromInt <|
+                        Time.toDay model.timeZone <|
+                            preDayPosix
+                   )
+                ++ " "
+                ++ (Timestamp.getFullMonth <|
+                        Time.toMonth model.timeZone <|
+                            preDayPosix
+                   )
+                ++ " "
+                ++ (String.fromInt <|
+                        Time.toYear model.timeZone <|
+                            preDayPosix
+                   )
     in
     { title = "Calendar"
     , content =
@@ -70,6 +130,8 @@ view model =
             [ section [ class "top" ]
                 [ div [ class "wrapper" ]
                     [ viewPageHeader model
+
+                    --, h1 [] [ text "NEXT: ", text (monthPrevNext (Timestamp.getNextMonthTime model.timeZone firstDayMonth)) ]
                     , div [ class "grid month-grid" ] <|
                         [ div [ class "grid-day grid-header" ] [ span [ class "day" ] [ text "Sunday" ] ]
                         , div [ class "grid-day grid-header" ] [ span [ class "day" ] [ text "Monday" ] ]
@@ -79,46 +141,63 @@ view model =
                         , div [ class "grid-day grid-header" ] [ span [ class "day" ] [ text "Friday" ] ]
                         , div [ class "grid-day grid-header" ] [ span [ class "day" ] [ text "Saturday" ] ]
                         ]
-                            ++ viewPrevMonthDays model.viewMonth model.viewYear firstDayMonth
-                            ++ List.map
-                                (\a ->
-                                    div [ class "grid-day", classList [ ( "today", Time.toDay model.timeZone model.timeNow == a && Time.toYear model.timeZone model.timeNow == model.viewYear && Time.toMonth model.timeZone model.timeNow == model.viewMonth ) ] ]
-                                        [ span [ class "day" ] [ text (String.fromInt a) ]
-                                        , span [ class "tag" ] [ text <| Timestamp.getDay <| Time.toWeekday model.timeZone model.timeNow ]
-                                        , node "inputgroup"
-                                            []
-                                            [ label [] [ text "Enter a task..." ]
-                                            , input
-                                                [ class "form-control input"
-                                                , placeholder "Enter task..."
-                                                ]
-                                                []
-                                            ]
-                                        ]
-                                )
-                                (List.range 1 (Timestamp.daysInMonth model.viewMonth model.viewYear))
+                            ++ List.map (\p -> div [ class "" ] [ text "test" ])
+                                (List.range 1 (dayOfWeek (Time.toWeekday model.timeZone firstDayMonth)))
+                            --++ viewPrevMonthDays model model.viewMonth model.viewYear firstDayMonth
+                            ++ viewMonthDays model.timeZone model.timeNow model.viewMonth model.viewYear model.viewMonthDayPosixTimes
                     , br [] []
                     , button [ class "btn btn-primary", onClick <| SwitchedYear (model.viewYear - 1) ] [ text "Prev Year" ]
                     , button [ class "btn  btn-primary", onClick <| SwitchedYear (model.viewYear + 1) ] [ text "Next Year" ]
+                    , button [ onClick SwitchedPrevMonth ] [ text "Previous Month" ]
+                    , button [ onClick SwitchedNextMonth ] [ text "Next Month" ]
                     ]
                 ]
             ]
     }
 
 
-viewPrevMonthDays : Time.Month -> Int -> Time.Weekday -> List (Html msg)
-viewPrevMonthDays month year firstDayNextMonth =
+viewMonthDays timeZone timeNow viewMonth viewYear viewMonthDayPosixTimes =
+    List.map
+        (\a ->
+            div [ class "grid-day", classList [ ( "today", Time.toDay timeZone timeNow == Time.toDay timeZone a && Time.toYear timeZone timeNow == viewYear && Time.toMonth timeZone timeNow == viewMonth ) ] ]
+                [ span [ class "day" ] [ text <| String.fromInt (Time.toDay timeZone a) ]
+
+                --    , span [ class "tag" ] [ text <| Timestamp.getDay <| Time.toWeekday timeZone a ]
+                , node "inputgroup"
+                    []
+                    [ label [] [ text "Enter a task..." ]
+                    , input
+                        [ class "form-control input"
+                        , placeholder "Enter task..."
+                        ]
+                        []
+                    ]
+                ]
+        )
+        viewMonthDayPosixTimes
+
+
+viewPrevMonthDays : Model -> Time.Month -> Int -> Time.Posix -> List (Html msg)
+viewPrevMonthDays model month year firstDayNextMonth =
     let
         preMonth =
             Timestamp.getMonthFromNumber <| Timestamp.getMonthNumber month - 1
+
+        preMonthNumberOfDays =
+            Timestamp.daysInMonth preMonth year
+
+        preMonthDayPosixTimes =
+            Calendar.getCurrentMonthDates model.timeZone model.timeNow
+
+        firstNextInt =
+            Time.toDay model.timeZone firstDayNextMonth
     in
     List.map
         (\d ->
-            div [ class "grid-day" ] [ text (String.fromInt d) ]
+            div [ class "grid-day" ] [ text (String.fromInt (Time.toDay model.timeZone d)) ]
         )
-        (List.range
-            (Timestamp.daysInMonth preMonth year - dayOfWeek firstDayNextMonth + 1)
-            (Timestamp.daysInMonth preMonth year)
+        (List.drop (preMonthNumberOfDays - firstNextInt)
+            preMonthDayPosixTimes
         )
 
 
@@ -179,7 +258,7 @@ viewPageHeader model =
                 class ""
 
         viewMonth m =
-            li [ isMonth m ] [ button [ onClick (SwitchedMonth m) ] [ text (Timestamp.getMonth m) ] ]
+            li [ isMonth m ] [ button [] [ text (Timestamp.getMonth m) ] ]
     in
     div [ class "page-header" ]
         [ ul [ class "nav nav-left" ] <|
@@ -206,7 +285,8 @@ type Msg
     = NoOp
     | GotTimeZone Time.Zone
     | GotTimeNow Time.Posix
-    | SwitchedMonth Time.Month
+    | SwitchedNextMonth
+    | SwitchedPrevMonth
     | SwitchedYear Int
 
 
@@ -223,13 +303,98 @@ update msg model =
             ( { model
                 | timeNow = time
                 , viewMonth = Time.toMonth model.timeZone time
+                , viewMonthDayPosixTimes = Calendar.getCurrentMonthDates model.timeZone time
                 , viewYear = Time.toYear model.timeZone time
               }
             , Cmd.none
             )
 
-        SwitchedMonth m ->
-            ( { model | viewMonth = m }, Cmd.none )
+        SwitchedNextMonth ->
+            let
+                {- switchedToMonth =
+                       Timestamp.getMonthNumber m
+
+                   switchedFromMonth =
+                       Timestamp.getMonthNumber model.viewMonth
+
+                   newMonthTime =
+                       if switchedToMonth > switchedFromMonth then
+                           Timestamp.getNextMonthTime model.timeZone model.timeNow
+
+                       else if switchedToMonth < switchedFromMonth then
+                           Timestamp.getPrevMonthTime model.timeZone model.timeNow
+
+                       else
+                           Calendar.getFirstDayOfMonth model.timeZone model.timeNow
+                -}
+                newMonthTime =
+                    case List.head model.viewMonthDayPosixTimes of
+                        Just a ->
+                            Timestamp.getNextMonthTime model.timeZone a
+
+                        _ ->
+                            model.timeNow
+
+                newMonth =
+                    Timestamp.getMonthNumber model.viewMonth
+                        + 1
+                        |> Timestamp.getMonthFromNumber
+
+                _ =
+                    Debug.log "NEXT MONTH" newMonth
+
+                monthPrevNext preDayPosix =
+                    (String.fromInt <|
+                        Time.toHour model.timeZone <|
+                            preDayPosix
+                    )
+                        ++ ":"
+                        ++ (String.fromInt <|
+                                Time.toMinute model.timeZone <|
+                                    preDayPosix
+                           )
+                        ++ " "
+                        ++ (Timestamp.getDay <|
+                                Time.toWeekday model.timeZone <|
+                                    preDayPosix
+                           )
+                        ++ " "
+                        ++ (String.fromInt <|
+                                Time.toDay model.timeZone <|
+                                    preDayPosix
+                           )
+                        ++ " "
+                        ++ (Timestamp.getFullMonth <|
+                                Time.toMonth model.timeZone <|
+                                    preDayPosix
+                           )
+                        ++ " "
+                        ++ (String.fromInt <|
+                                Time.toYear model.timeZone <|
+                                    preDayPosix
+                           )
+
+                _ =
+                    Debug.log "NEW MONTH" (monthPrevNext newMonthTime)
+            in
+            ( { model | viewMonth = newMonth, viewMonthDayPosixTimes = Calendar.getCurrentMonthDates model.timeZone newMonthTime }, Cmd.none )
+
+        SwitchedPrevMonth ->
+            let
+                newMonthTime =
+                    case List.head model.viewMonthDayPosixTimes of
+                        Just a ->
+                            Timestamp.getPrevMonthTime model.timeZone a
+
+                        _ ->
+                            model.timeNow
+
+                newMonth =
+                    Timestamp.getMonthNumber model.viewMonth
+                        - 1
+                        |> Timestamp.getMonthFromNumber
+            in
+            ( { model | viewMonth = newMonth, viewMonthDayPosixTimes = Calendar.getCurrentMonthDates model.timeZone newMonthTime }, Cmd.none )
 
         SwitchedYear y ->
             ( { model | viewYear = y }, Cmd.none )
