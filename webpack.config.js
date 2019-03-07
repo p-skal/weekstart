@@ -1,0 +1,47 @@
+const HtmlWebpackPlugin = require('html-webpack-plugin')
+
+module.exports = {
+    entry: `${__dirname}/assets/js/index.js`,
+    output: {
+        path: `${__dirname}/dist`,
+        filename: 'bundle.js',
+        libraryTarget: 'window',
+    },
+    module: {
+        rules: [
+
+            {
+                test: /\.(css|scss)$/,
+                loader: ['style-loader', 'css-loader', 'sass-loader'],
+            },
+            {
+                test: /\.elm$/,
+                loader: 'elm-webpack-loader',
+                options: {
+                    debug: true
+                }
+            },
+            {
+                test: /\.svg$/,
+                loader: 'url-loader'
+            }
+        ],
+    },
+    plugins: [
+        new HtmlWebpackPlugin({
+            title: 'Weekstart',
+            template: `${__dirname}/index.html`,
+        })
+    ],
+    mode: process.env.WEBPACK_SERVE ? 'development' : 'production',
+    devServer: {
+        port: '8080',
+        compress: true,
+        watchContentBase: true,
+        open: 'Google Chrome',
+    },
+    watch: true,
+    watchOptions: {
+        ignored: ['node_modules']
+    }
+};
