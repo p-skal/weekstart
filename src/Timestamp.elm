@@ -1,4 +1,4 @@
-module Timestamp exposing (daysInMonth, format, formatSlashes, getDay, getFullMonth, getMonth, getMonthFromNumber, getMonthNumber, getNextMonth, getNextMonthTime, getPrevMonth, getPrevMonthTime, toMonth, view)
+module Timestamp exposing (daysInMonth, format, formatSlashes, formatTime, getDay, getFullMonth, getMonth, getMonthFromNumber, getMonthNumber, getNextMonth, getNextMonthTime, getPrevMonth, getPrevMonthTime, toMonth, view)
 
 import Derberos.Date.Calendar as Calendar
 import Html exposing (Html, span, text)
@@ -18,6 +18,31 @@ view timeZone timestamp =
 
 
 -- FORMAT
+
+
+formatTime : Time.Zone -> Time.Posix -> String
+formatTime zone time =
+    let
+        addZeros int =
+            if int < 10 then
+                "0"
+
+            else
+                ""
+
+        dayNight =
+            if Time.toHour zone time >= 12 then
+                " PM"
+
+            else
+                " AM"
+    in
+    addZeros (Time.toHour zone time)
+        ++ String.fromInt (Time.toHour zone time)
+        ++ ":"
+        ++ addZeros (Time.toMinute zone time)
+        ++ String.fromInt (Time.toMinute zone time)
+        ++ dayNight
 
 
 {-| Format a timestamp as a String, like so:

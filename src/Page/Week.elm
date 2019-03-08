@@ -1,4 +1,4 @@
-module Page.Week exposing (Model, Msg, TaskType(..), init, subscriptions, toSession, update, view)
+module Page.Week exposing (Model, Msg, init, subscriptions, toSession, update, view)
 
 import Derberos.Date.Calendar as Calendar
 import Html exposing (..)
@@ -9,36 +9,21 @@ import Session exposing (Session)
 import Task
 import Time
 import Timestamp
+import WeekTask exposing (WeekTask)
 
 
 
 -- MODEL
 
 
-type TaskType
-    = Normal
-    | Important
-    | Upcoming
-    | Past
-
-
-type alias Task =
-    { day : Time.Weekday
-    , details : String
-    , time :
-        { hour : Int
-        , min : Int
-        }
-    , taskType : TaskType
-    }
-
-
 type alias Model =
     { session : Session
-    , magic : TaskForm
+    , magic : WeekTask.Form
     , timeZone : Time.Zone
     , timeNow : Time.Posix
-    , tasks : List Task
+    , timeOfDaySelected : Time.Posix
+    , viewWeekTimes : List Time.Posix
+    , tasks : List WeekTask
     , modal : Bool
     }
 
@@ -50,21 +35,12 @@ type alias Modal =
     }
 
 
-type alias TaskForm =
-    { day : Time.Weekday
-    , details : String
-    , time : Time.Posix
-    , timeHour : Int
-    , timeMin : Int
-    }
-
-
 type alias Day =
     { day : Time.Weekday
-    , tasks : List Task
+    , tasks : List WeekTask
     , newTask : String
     , newTaskTime : Time.Posix
-    , newTaskType : TaskType
+    , newTaskType : WeekTask.Type
     }
 
 
@@ -74,13 +50,22 @@ type alias Day =
 
 init : Session -> ( Model, Cmd Msg )
 init session =
+    let
+        initTime =
+            Time.millisToPosix 0
+
+        ausZone =
+            Time.customZone 660 []
+    in
     ( { session = session
-      , magic = TaskForm Time.Mon "" (Time.millisToPosix 0) 0 0
-      , timeZone = Time.customZone 660 []
-      , timeNow = Time.millisToPosix 0
+      , magic = WeekTask.Form Time.Mon "" initTime 0 0
+      , timeZone = ausZone
+      , timeNow = initTime
+      , timeOfDaySelected = initTime
+      , viewWeekTimes = []
       , tasks =
-            [ Task Time.Mon "Get up for uni" { hour = 8, min = 0 } Important
-            , Task Time.Tue "Get up for uni" { hour = 8, min = 0 } Important
+            [ WeekTask Time.Mon "Get up for uni" initTime WeekTask.Important
+            , WeekTask Time.Tue "Get up for uni" initTime WeekTask.Important
             ]
       , modal = False
       }
@@ -97,16 +82,12 @@ init session =
 
 view : Model -> { title : String, content : Html Msg }
 view model =
-    let
-        dates =
-            Calendar.getCurrentWeekDates model.timeZone model.timeNow
-    in
     { title = "Week"
     , content =
         main_ []
             [ section [ class "top" ]
                 [ div [ class "wrapper" ]
-                    [ viewPageHeader model.timeZone model.timeNow
+                    [ viewPageHeader model.timeZone model.timeNow (Maybe.withDefault model.timeNow <| List.head model.viewWeekTimes)
                     , div [ class "grid week-grid" ] <|
                         {- List.map (viewWeekday model.timeZone model.timeNow) model.tasks
                            [ viewWeekday model.tasks Time.Mon model.timeZone model.timeNow model.magic
@@ -119,28 +100,31 @@ view model =
                            , div [ class "week-day" ] []
                            ]
                         -}
-                        List.map (viewWeekday model.timeZone model.timeNow model.tasks model.magic) dates
+                        List.map (viewWeekday model.timeZone model.timeNow model.tasks model.magic) model.viewWeekTimes
+                    , br [] []
+                    , button [ onClick SwitchedPrevWeek ] [ text "Previous Week" ]
+                    , button [ onClick SwitchedNextWeek ] [ text "Next Week" ]
                     ]
                 ]
-            , viewModal model.modal "Enter a time for your task..." [ input [ type_ "number", placeholder "00", Html.Attributes.max "24", onInput EnteredTimeHour ] [], text ":", input [ type_ "number", Html.Attributes.max "59", placeholder "00", onInput EnteredTimeMin ] [], button [ class "btn btn-primary", onClick AddTask ] [ text "Enter" ] ]
+            , viewModal model.modal "Enter a time for your task..." [ input [ type_ "number", placeholder "00", Html.Attributes.max "24", onInput EnteredTimeHour, autofocus True ] [], text ":", input [ type_ "number", Html.Attributes.max "59", placeholder "00", onInput EnteredTimeMin ] [], button [ class "btn btn-primary", onClick AddTask ] [ text "Enter" ] ]
             ]
     }
 
 
-viewPageHeader : Time.Zone -> Time.Posix -> Html Msg
-viewPageHeader timeZone timeNow =
+viewPageHeader : Time.Zone -> Time.Posix -> Time.Posix -> Html Msg
+viewPageHeader timeZone timeNow viewWeekTime =
     let
-        firstSixMonths =
+        _ =
+            Debug.log "ALALLALA" (Time.toMonth timeZone viewWeekTime)
+
+        monthsOfTheYear =
             [ Time.Jan
             , Time.Feb
             , Time.Mar
             , Time.Apr
             , Time.May
             , Time.Jun
-            ]
-
-        lastSixMonths =
-            [ Time.Jul
+            , Time.Jul
             , Time.Aug
             , Time.Sep
             , Time.Oct
@@ -149,7 +133,10 @@ viewPageHeader timeZone timeNow =
             ]
 
         isMonth current =
-            if Time.toMonth timeZone timeNow == current then
+            if Time.toMonth timeZone viewWeekTime == current then
+                class "active"
+
+            else if Time.toMonth timeZone timeNow == current then
                 class "today active"
 
             else
@@ -160,13 +147,13 @@ viewPageHeader timeZone timeNow =
     in
     div [ class "page-header" ]
         [ ul [ class "nav nav-left" ] <|
-            List.map viewMonth firstSixMonths
+            List.map viewMonth (List.take 6 monthsOfTheYear)
         , div [ class "page-title" ]
             [ h1 [] [ text "The Weekly Brief" ]
-            , small [] [ b [] [ Timestamp.view timeZone timeNow ] ]
+            , small [] [ b [] [ text "Welcome back, Peter 👋 ", Timestamp.view timeZone timeNow ] ]
             ]
         , ul [ class "nav nav-right" ] <|
-            List.map viewMonth lastSixMonths
+            List.map viewMonth (List.reverse <| List.take 6 <| List.reverse monthsOfTheYear)
         , ul [ class "nav" ]
             [ li [ class "nav-trigger" ]
                 [ button [] [ i [ style "marginRight" ".5rem", class "fas fa-bars" ] [], text "Months" ]
@@ -195,14 +182,14 @@ viewModal modal title content =
             text ""
 
 
-viewWeekday : Time.Zone -> Time.Posix -> List Task -> TaskForm -> Time.Posix -> Html Msg
+viewWeekday : Time.Zone -> Time.Posix -> List WeekTask -> WeekTask.Form -> Time.Posix -> Html Msg
 viewWeekday timeZone timeNow tasks form dateTime =
     let
         date =
             Timestamp.formatSlashes timeZone dateTime
 
         isToday =
-            if Time.toWeekday timeZone timeNow == Time.toWeekday timeZone dateTime then
+            if Time.toDay timeZone timeNow == Time.toDay timeZone dateTime && Time.toMonth timeZone timeNow == Time.toMonth timeZone dateTime && Time.toYear timeZone timeNow == Time.toYear timeZone dateTime then
                 span [ class "tag" ] [ text "Today" ]
 
             else
@@ -217,92 +204,17 @@ viewWeekday timeZone timeNow tasks form dateTime =
         , inputgroup "Add a task"
             form
             (EnteredTask (Time.toWeekday timeZone dateTime))
-            [ button [ class "input-icon", onClick SelectTime ] [ i [ class "far fa-clock" ] [] ]
+            [ button [ class "input-icon", onClick (SelectTime dateTime) ] [ i [ class "far fa-clock" ] [] ]
             ]
-        , List.filter (\task -> task.day == Time.toWeekday timeZone dateTime) tasks
-            |> viewTaskList timeZone timeNow dateTime
+        , tasks
+            |> List.filter (\task -> Time.toDay timeZone task.time == Time.toDay timeZone dateTime)
+            |> List.filter (\task -> Time.toMonth timeZone task.time == Time.toMonth timeZone dateTime)
+            |> List.filter (\task -> Time.toYear timeZone task.time == Time.toYear timeZone dateTime)
+            |> WeekTask.viewList timeZone timeNow dateTime EditingTask
         ]
 
 
-viewTaskList : Time.Zone -> Time.Posix -> Time.Posix -> List Task -> Html msg
-viewTaskList timeZone timeNow dateTime tasks =
-    tasks
-        |> List.sortBy (\t -> t.time.min)
-        |> List.sortBy (\t -> t.time.hour)
-        |> List.map (viewTask timeZone timeNow dateTime)
-        |> ul [ class "task-list" ]
-
-
-viewTask timeZone timeNow dateTime task =
-    let
-        taskType =
-            case task.taskType of
-                Normal ->
-                    class ""
-
-                Important ->
-                    class "important"
-
-                Upcoming ->
-                    class "important"
-
-                Past ->
-                    class "past"
-
-        typeee =
-            if Time.posixToMillis timeNow > Time.posixToMillis dateTime + 1000 * 60 * 60 * task.time.hour + 1000 * 60 * task.time.min then
-                class "past"
-
-            else
-                class ""
-
-        isNow =
-            case task.taskType of
-                Upcoming ->
-                    text " • now"
-
-                _ ->
-                    text ""
-
-        addZeros int =
-            if int < 10 then
-                "0"
-
-            else
-                ""
-
-        dayNight =
-            if task.time.hour >= 12 then
-                " PM"
-
-            else
-                " AM"
-
-        taskTime =
-            {- String.fromInt (Time.toHour timeZone task.time)
-               ++ ":"
-               ++ String.fromInt (Time.toMinute timeZone task.time)
-               ++ (if Time.toHour timeZone task.time < 12 then
-                       "AM"
-
-                   else
-                       "PM"
-                  )
-            -}
-            addZeros task.time.hour
-                ++ String.fromInt task.time.hour
-                ++ ":"
-                ++ addZeros task.time.min
-                ++ String.fromInt task.time.min
-                ++ dayNight
-    in
-    li [ class "task", taskType, typeee ]
-        [ span [ class "time" ] [ text taskTime, isNow ]
-        , text task.details
-        ]
-
-
-inputgroup : String -> TaskForm -> (String -> msg) -> List (Html msg) -> Html msg
+inputgroup : String -> WeekTask.Form -> (String -> msg) -> List (Html msg) -> Html msg
 inputgroup title form inputMsg content =
     node "inputgroup"
         [ classList [ ( "active", form.details /= "" ) ]
@@ -311,7 +223,7 @@ inputgroup title form inputMsg content =
         [ label [] [ text title ]
         , input
             [ class "form-control input"
-            , placeholder title
+            , placeholder (title ++ "...")
             , onInput inputMsg
             , value form.details
             ]
@@ -330,9 +242,12 @@ type Msg
     | EnteredTask Time.Weekday String
     | EnteredTimeHour String
     | EnteredTimeMin String
-    | SelectTime
+    | SelectTime Time.Posix
     | AddTask
     | Tick Time.Posix
+    | EditingTask WeekTask String
+    | SwitchedNextWeek
+    | SwitchedPrevWeek
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -381,33 +296,74 @@ update msg model =
             in
             ( { model | magic = { m | timeMin = newTime } }, Cmd.none )
 
-        SelectTime ->
+        SelectTime dateTime ->
             let
                 m =
                     model.modal
             in
             if model.modal == False then
-                ( { model | modal = True }, Cmd.none )
+                ( { model | modal = True, timeOfDaySelected = dateTime }, Cmd.none )
 
             else
-                ( { model | modal = False }, Cmd.none )
+                ( { model | modal = False, timeOfDaySelected = model.timeNow }, Cmd.none )
 
         AddTask ->
+            let
+                taskTime =
+                    Time.posixToMillis model.timeOfDaySelected
+                        + 1000
+                        * 60
+                        * 60
+                        * model.magic.timeHour
+                        + 1000
+                        * 60
+                        * model.magic.timeMin
+                        |> Time.millisToPosix
+            in
             case model.magic.details of
                 "" ->
                     ( { model | modal = False }, Cmd.none )
 
                 _ ->
-                    ( { model | tasks = model.tasks ++ [ Task model.magic.day model.magic.details { hour = model.magic.timeHour, min = model.magic.timeMin } Normal ], magic = TaskForm model.magic.day "" model.timeNow 0 0, modal = False }, Cmd.none )
+                    ( { model | tasks = model.tasks ++ [ WeekTask model.magic.day model.magic.details taskTime WeekTask.Normal ], magic = WeekTask.Form model.magic.day "" model.timeNow 0 0, modal = False }, Cmd.none )
 
         GotTimeZone tz ->
             ( { model | timeZone = Time.customZone 660 [] }, Cmd.none )
 
         GotTimeNow time ->
-            ( { model | timeNow = time }, Cmd.none )
+            ( { model
+                | timeNow = time
+                , viewWeekTimes = Calendar.getCurrentWeekDates model.timeZone time
+              }
+            , Cmd.none
+            )
 
         Tick newTime ->
             ( { model | timeNow = newTime }, Cmd.none )
+
+        EditingTask task newTaskDetails ->
+            let
+                taskList =
+                    List.filter (\a -> a /= task) model.tasks
+
+                newTasks =
+                    taskList ++ [ { task | details = newTaskDetails } ]
+            in
+            ( { model | tasks = newTasks }, Cmd.none )
+
+        SwitchedNextWeek ->
+            let
+                nextWeekTime =
+                    Time.millisToPosix <| Time.posixToMillis (Maybe.withDefault model.timeNow <| List.head model.viewWeekTimes) + 168 * 60 * 60 * 1000
+            in
+            ( { model | viewWeekTimes = Calendar.getCurrentWeekDates model.timeZone nextWeekTime }, Cmd.none )
+
+        SwitchedPrevWeek ->
+            let
+                nextWeekTime =
+                    Time.millisToPosix <| Time.posixToMillis (Maybe.withDefault model.timeNow <| List.head model.viewWeekTimes) - 168 * 60 * 60 * 1000
+            in
+            ( { model | viewWeekTimes = Calendar.getCurrentWeekDates model.timeZone nextWeekTime }, Cmd.none )
 
 
 

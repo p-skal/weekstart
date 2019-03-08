@@ -15,6 +15,7 @@ import Route exposing (Route)
 import Session exposing (Session)
 import Url exposing (Url)
 import Viewer exposing (Viewer)
+import WeekTask exposing (WeekTask)
 
 
 type Model

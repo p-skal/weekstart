@@ -240,6 +240,13 @@ ul.task-list {
         border-radius: .5rem;
         background: rgba(255, 255, 255, 0.1);
         padding: .5rem 0;
+        transition: 1s all ease;
+        input {
+            padding: 0;
+            margin: 0;
+            border: none !important;
+            box-shadow: none !important;
+        }
         .time {
             text-transform: uppercase;
             font-weight: 700;
@@ -256,7 +263,7 @@ ul.task-list {
             margin-bottom: .5rem;
         }
         &.past {
-            cursor: none;
+            cursor: not-allowed;
             background: rgba(0, 0, 0, 0.04);
             color: rgba(0,0,0,0.25);
             padding: .5rem .5rem;
@@ -272,10 +279,29 @@ ul.task-list {
             border-bottom-width: 2px;
         }
     }
+    li.time-now {
+        padding: 0 !important;
+        margin: 0 !important;
+        background: crimson!important;
+        height: 2px;
+        position: relative;
+        transition: 1s all ease;
+        &:before {
+            position: absolute;
+            width: 10px;
+            content: "";
+            height: 10px;
+            left: -10px;
+            top: -4px;
+            background: crimson;
+            border-radius: .25rem;
+        }
+    }
 }
 
 .grid {
     display: grid;
+    justify-content: center;
     grid-gap: 1px;
     background-color: $mainDark;
     border-top: 3px solid $mainDark;
@@ -285,6 +311,7 @@ ul.task-list {
         background-color: $mainLight;
         position: relative;
         transition: .2s background-color ease;
+
         &.grid-header {
 
         }
@@ -333,14 +360,32 @@ ul.task-list {
 
 
 .week-grid {
-    grid-template-columns: auto auto auto auto;
+    grid-template-columns: 25% 25% 25% 25%;
     grid-template-rows: minmax(18rem, max-content) minmax(18rem, max-content);
 }
 .month-grid {
-    grid-template-columns: auto auto auto auto auto auto auto;
+    grid-template-columns: 15% 14% 14% 14% 14% 14% 15%;
     grid-template-rows: minmax(3rem, max-content) minmax(8rem, max-content) minmax(8rem, max-content) minmax(8rem, max-content) minmax(8rem, max-content);
     .grid-day {
         font-size: .8rem;
+        input {
+            padding: 0 !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+        }
+        label {
+            display: none;
+        }
+        .task-list {
+            .task {
+                display: flex;
+                .time {
+                    margin-bottom: 0;
+                    white-space: nowrap;
+                    margin-right: 0.5rem;
+                }
+            }
+        }
         &.today {
             .day {
                 display: initial;
@@ -425,13 +470,16 @@ ul.task-list {
         }
     }
     .week-grid {
-        grid-template-columns: auto;
+        grid-template-columns: 100%;
         grid-template-rows: auto auto auto auto auto auto auto;
         .week-day {
             &:last-child {
                 display: none;
             }
         }
+    }
+    .month-grid {
+        grid-template-columns: 100%;
     }
     footer {
         text-align: center;

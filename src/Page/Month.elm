@@ -8,6 +8,7 @@ import Session exposing (Session)
 import Task
 import Time
 import Timestamp
+import WeekTask exposing (WeekTask)
 
 
 
@@ -21,6 +22,7 @@ type alias Model =
     , viewMonth : Time.Month
     , viewMonthDayPosixTimes : List Time.Posix
     , viewYear : Int
+    , tasks : List WeekTask
     }
 
 
@@ -34,12 +36,23 @@ type Date
 
 init : Session -> ( Model, Cmd Msg )
 init session =
+    let
+        initTime =
+            Time.millisToPosix 0
+
+        ausZone =
+            Time.customZone 660 []
+    in
     ( { session = session
-      , timeNow = Time.millisToPosix 0
-      , timeZone = Time.customZone 660 []
+      , timeNow = initTime
+      , timeZone = ausZone
       , viewMonth = Time.Jan
       , viewMonthDayPosixTimes = []
       , viewYear = 1970
+      , tasks =
+            [ WeekTask Time.Mon "Get up for uni" initTime WeekTask.Important
+            , WeekTask Time.Tue "Test Weekstart" (Time.millisToPosix 1552093200000) WeekTask.Important
+            ]
       }
     , Cmd.batch
         [ Task.perform GotTimeZone Time.here
@@ -141,10 +154,22 @@ view model =
                         , div [ class "grid-day grid-header" ] [ span [ class "day" ] [ text "Friday" ] ]
                         , div [ class "grid-day grid-header" ] [ span [ class "day" ] [ text "Saturday" ] ]
                         ]
-                            ++ List.map (\p -> div [ class "" ] [ text "test" ])
-                                (List.range 1 (dayOfWeek (Time.toWeekday model.timeZone firstDayMonth)))
+                            ++ List.map
+                                (\p ->
+                                    div [ class "grid-day prev-month", style "backgroundColor" "#eae8dc" ]
+                                        [ span [ class "day" ] [ text <| String.fromInt p ]
+                                        ]
+                                )
+                                (List.reverse <|
+                                    List.take (dayOfWeek (Time.toWeekday model.timeZone firstDayMonth)) <|
+                                        List.drop 3 <|
+                                            List.reverse <|
+                                                List.map (\d -> Time.toDay model.timeZone d) <|
+                                                    Calendar.getCurrentMonthDates model.timeZone (Timestamp.getPrevMonthTime model.timeZone model.timeNow)
+                                )
+                            --(List.range 1 (dayOfWeek (Time.toWeekday model.timeZone firstDayMonth)))
                             --++ viewPrevMonthDays model model.viewMonth model.viewYear firstDayMonth
-                            ++ viewMonthDays model.timeZone model.timeNow model.viewMonth model.viewYear model.viewMonthDayPosixTimes
+                            ++ viewMonthDays model.timeZone model.timeNow model.viewMonth model.viewYear model.tasks model.viewMonthDayPosixTimes
                     , br [] []
                     , button [ class "btn btn-primary", onClick <| SwitchedYear (model.viewYear - 1) ] [ text "Prev Year" ]
                     , button [ class "btn  btn-primary", onClick <| SwitchedYear (model.viewYear + 1) ] [ text "Next Year" ]
@@ -156,25 +181,37 @@ view model =
     }
 
 
-viewMonthDays timeZone timeNow viewMonth viewYear viewMonthDayPosixTimes =
+viewMonthDays : Time.Zone -> Time.Posix -> Time.Month -> Int -> List WeekTask -> List Time.Posix -> List (Html Msg)
+viewMonthDays timeZone timeNow viewMonth viewYear tasks viewMonthDayPosixTimes =
     List.map
-        (\a ->
-            div [ class "grid-day", classList [ ( "today", Time.toDay timeZone timeNow == Time.toDay timeZone a && Time.toYear timeZone timeNow == viewYear && Time.toMonth timeZone timeNow == viewMonth ) ] ]
-                [ span [ class "day" ] [ text <| String.fromInt (Time.toDay timeZone a) ]
-
-                --    , span [ class "tag" ] [ text <| Timestamp.getDay <| Time.toWeekday timeZone a ]
-                , node "inputgroup"
-                    []
-                    [ label [] [ text "Enter a task..." ]
-                    , input
-                        [ class "form-control input"
-                        , placeholder "Enter task..."
-                        ]
-                        []
-                    ]
-                ]
+        (viewMonthDay
+            timeZone
+            timeNow
+            viewMonth
+            viewYear
+            tasks
         )
         viewMonthDayPosixTimes
+
+
+viewMonthDay : Time.Zone -> Time.Posix -> Time.Month -> Int -> List WeekTask -> Time.Posix -> Html Msg
+viewMonthDay timeZone timeNow viewMonth viewYear tasks dateTime =
+    div [ class "grid-day", classList [ ( "today", Time.toDay timeZone timeNow == Time.toDay timeZone dateTime && Time.toYear timeZone timeNow == viewYear && Time.toMonth timeZone timeNow == viewMonth ) ] ]
+        [ span [ class "day" ] [ text <| String.fromInt (Time.toDay timeZone dateTime) ]
+
+        --, span [ class "tag" ] [ text <| Timestamp.getDay <| Time.toWeekday timeZone a ]
+        , node "inputgroup"
+            []
+            [ label [] [ text "Enter a task..." ]
+            , input
+                [ class "form-control input"
+                , placeholder "Enter task..."
+                ]
+                []
+            ]
+        , List.filter (\task -> Time.toDay timeZone task.time == Time.toDay timeZone dateTime) tasks
+            |> WeekTask.viewList timeZone timeNow dateTime EditingTask
+        ]
 
 
 viewPrevMonthDays : Model -> Time.Month -> Int -> Time.Posix -> List (Html msg)
@@ -288,6 +325,7 @@ type Msg
     | SwitchedNextMonth
     | SwitchedPrevMonth
     | SwitchedYear Int
+    | EditingTask WeekTask String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -398,6 +436,16 @@ update msg model =
 
         SwitchedYear y ->
             ( { model | viewYear = y }, Cmd.none )
+
+        EditingTask task newTaskDetails ->
+            let
+                taskList =
+                    List.filter (\a -> a /= task) model.tasks
+
+                newTasks =
+                    taskList ++ [ { task | details = newTaskDetails } ]
+            in
+            ( { model | tasks = newTasks }, Cmd.none )
 
 
 
