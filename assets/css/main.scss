@@ -144,6 +144,7 @@ button.input-icon {
 
 button {
     cursor: pointer;
+    color: $mainDark;
     border: none;
     border-radius: .5rem;
     background: none;
@@ -153,22 +154,38 @@ button {
     /* font-size: 1rem; */
 }
 
-
+.btn-list {
+    display: flex;
+    align-items: center;
+}
 .btn {
     border: none;
     background: none;
     font-size: 1rem;
     font-weight: 600;
     letter-spacing: .5px;
-    padding: .75rem 1.25rem;
+    padding: .65rem 1rem;
     border-radius: 2rem;
 }
 
 .btn.btn-primary {
     background: $mainDark;
     color: $mainLight;
+    background-color: #f8f6ef;
+    color: $mainDark;
+    border: 1px solid $mainDark;
+    border-bottom-width: 3px;
+    border-radius: .75rem;
 }
 
+.btn.btn-secondary {
+    background: $mainDark;
+    color: $mainLight;
+
+    border: 1px solid $mainDark;
+    border-bottom-width: 3px;
+    border-radius: .75rem;
+}
 
 section {
     width: 100%;
@@ -235,7 +252,7 @@ ul.task-list {
     list-style: none;
     margin: 0.5rem 0;
     padding: .5rem 0 0;
-    border-top: 1px dotted rgba(0, 0, 0, 0.25);
+    //border-top: 1px dotted rgba(0, 0, 0, 0.25);
     li {
         border-radius: .5rem;
         background: rgba(255, 255, 255, 0.1);
@@ -267,7 +284,7 @@ ul.task-list {
             background: rgba(0, 0, 0, 0.04);
             color: rgba(0,0,0,0.25);
             padding: .5rem .5rem;
-            margin: 0.5rem 0 0 -0.5rem;
+            margin: 0.5rem -0.5rem;
             border: 1px dashed rgba(0,0,0,0.2);
             margin-bottom: .5rem;
         }
