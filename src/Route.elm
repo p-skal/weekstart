@@ -1,8 +1,9 @@
-module Route exposing (Route(..), fromUrl, href, replaceUrl)
+module Route exposing (Route(..), back, fromUrl, href, replaceUrl)
 
 import Browser.Navigation as Nav
 import Html exposing (Attribute)
 import Html.Attributes as Attr
+import Time
 import Url exposing (Url)
 import Url.Parser as Parser exposing ((</>), Parser, oneOf, s, string)
 import Username exposing (Username)
@@ -13,9 +14,10 @@ import Username exposing (Username)
 
 
 type Route
-    = Week
-    | Root
+    = Root
     | Login
+    | Day Time.Posix
+    | Week
     | Month
 
 
@@ -24,12 +26,30 @@ parser =
     oneOf
         [ Parser.map Week Parser.top
         , Parser.map Login (s "login")
+        , Parser.map Day (s "day" </> dayParser)
         , Parser.map Month (s "calendar")
         ]
 
 
+dayParser : Parser (Time.Posix -> a) a
+dayParser =
+    Parser.custom "TIME"
+        (\str ->
+            let
+                time =
+                    Time.millisToPosix <| Maybe.withDefault 0 <| String.toInt str
+            in
+            Just time
+        )
+
+
 
 -- PUBLIC HELPERS
+
+
+back : Nav.Key -> Cmd msg
+back key =
+    Nav.back key 1
 
 
 href : Route -> Attribute msg
@@ -68,6 +88,9 @@ routeToString page =
 
                 Login ->
                     [ "login" ]
+
+                Day dayTime ->
+                    [ "day", String.fromInt (Time.posixToMillis dayTime) ]
 
                 Month ->
                     [ "calendar" ]
