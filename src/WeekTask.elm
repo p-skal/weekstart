@@ -79,14 +79,13 @@ viewOne timeZone timeNow dateTime editingMsg task =
                 class ""
 
         isNow =
-            case task.taskType of
-                Upcoming ->
-                    text " • now"
+            if typeee == class "upcoming" then
+                span [ style "textTransform" "lowercase" ] [ text " • next" ]
 
-                _ ->
-                    text ""
+            else
+                text ""
     in
-    li [ class "task", taskType, typeee ]
+    li [ class "task", taskType, typeee, title (Timestamp.formatTime timeZone task.time) ]
         [ if task.taskType == Tracker then
             text ""
 
