@@ -2,3 +2,7 @@ dist/
 node_modules/
 elm-stuff/
 tests/elm-stuff/
+assets/css/main.css
+assets/css/main.min.css
+
+.DS_Store
