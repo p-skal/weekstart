@@ -1,6 +1,7 @@
 module Page exposing (Page(..), view, viewErrors)
 
 import Api exposing (Cred)
+import Asset exposing (btnIconRight)
 import Avatar
 import Browser exposing (Document)
 import Html exposing (Html, a, button, div, footer, i, img, li, nav, p, span, text, ul)
@@ -19,6 +20,7 @@ under Other.
 -}
 type Page
     = Other
+    | Day
     | Week
     | Month
 
@@ -87,10 +89,10 @@ viewFooter page =
                     ]
                 , div [ class "footer-links" ]
                     [ if page /= Week then
-                        a [ class "btn btn-primary", Route.href Route.Week ] [ text "My Weekly Brief ", i [ class "fas fa-calendar-alt", style "marginLeft" ".25rem" ] [] ]
+                        a [ class "btn btn-secondary", Route.href Route.Week ] [ text "My Weekly Brief ", btnIconRight "calendar-week" ]
 
                       else
-                        a [ class "btn btn-primary", Route.href Route.Month ] [ text "My Monthly Brief ", i [ class "fas fa-calendar-alt", style "marginLeft" ".25rem" ] [] ]
+                        a [ class "btn btn-secondary", Route.href Route.Month ] [ text "My Monthly Brief ", btnIconRight "calendar-alt" ]
                     ]
                 ]
             ]
