@@ -1,11 +1,11 @@
-module Asset exposing (Image, defaultAvatar, error, loading, src)
+module Asset exposing (Image, btnIconLeft, btnIconRight, defaultAvatar, error, loading, src)
 
 {-| Assets, such as images, videos, and audio. (We only have images for now.)
 We should never expose asset URLs directly; this module should be in charge of
 all of them. One source of truth!
 -}
 
-import Html exposing (Attribute, Html)
+import Html exposing (Attribute, Html, i)
 import Html.Attributes as Attr
 
 
@@ -44,3 +44,17 @@ image filename =
 src : Image -> Attribute msg
 src (Image url) =
     Attr.src url
+
+
+
+-- MORE
+
+
+btnIconLeft : String -> Html msg
+btnIconLeft icon =
+    i [ Attr.style "marginRight" ".5rem", Attr.class <| "fas fa-" ++ icon ] []
+
+
+btnIconRight : String -> Html msg
+btnIconRight icon =
+    i [ Attr.style "marginLeft" ".5rem", Attr.class <| "fas fa-" ++ icon ] []
