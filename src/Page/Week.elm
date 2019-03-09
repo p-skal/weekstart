@@ -1,10 +1,12 @@
 module Page.Week exposing (Model, Msg, init, subscriptions, toSession, update, view)
 
+import Asset exposing (btnIconLeft, btnIconRight)
 import Derberos.Date.Calendar as Calendar
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput)
 import Page
+import Route
 import Session exposing (Session)
 import Task
 import Time
@@ -48,8 +50,8 @@ type alias Day =
 -- INIT
 
 
-init : Session -> ( Model, Cmd Msg )
-init session =
+init : Session -> List WeekTask -> ( Model, Cmd Msg )
+init session tasks =
     let
         initTime =
             Time.millisToPosix 0
@@ -63,10 +65,7 @@ init session =
       , timeNow = initTime
       , timeOfDaySelected = initTime
       , viewWeekTimes = []
-      , tasks =
-            [ WeekTask Time.Mon "Get up for uni" initTime WeekTask.Important
-            , WeekTask Time.Tue "Get up for uni" initTime WeekTask.Important
-            ]
+      , tasks = tasks
       , modal = False
       }
     , Cmd.batch
@@ -80,8 +79,8 @@ init session =
 -- VIEW
 
 
-view : Model -> { title : String, content : Html Msg }
-view model =
+view : Model -> List WeekTask -> { title : String, content : Html Msg }
+view model tasks =
     { title = "Week"
     , content =
         main_ []
@@ -100,10 +99,10 @@ view model =
                            , div [ class "week-day" ] []
                            ]
                         -}
-                        List.map (viewWeekday model.timeZone model.timeNow model.tasks model.magic) model.viewWeekTimes
+                        List.map (viewWeekday model.timeZone model.timeNow tasks model.magic) model.viewWeekTimes
                     , br [] []
-                    , button [ onClick SwitchedPrevWeek ] [ text "Previous Week" ]
-                    , button [ onClick SwitchedNextWeek ] [ text "Next Week" ]
+                    , button [ class "btn btn-primary", onClick SwitchedPrevWeek ] [ btnIconLeft "angle-left", text "Previous Week" ]
+                    , button [ class "btn btn-primary", onClick SwitchedNextWeek ] [ text "Next Week", btnIconRight "angle-right" ]
                     ]
                 ]
             , viewModal model.modal "Enter a time for your task..." [ input [ type_ "number", placeholder "00", Html.Attributes.max "24", onInput EnteredTimeHour, autofocus True ] [], text ":", input [ type_ "number", Html.Attributes.max "59", placeholder "00", onInput EnteredTimeMin ] [], button [ class "btn btn-primary", onClick AddTask ] [ text "Enter" ] ]
@@ -196,7 +195,7 @@ viewWeekday timeZone timeNow tasks form dateTime =
                 text ""
     in
     div [ class "grid-day", classList [ ( "today", Time.toDay timeZone timeNow == Time.toDay timeZone dateTime ) ] ] <|
-        [ span [ class "day" ]
+        [ a [ class "day", Route.href (Route.Day dateTime) ]
             [ text (Timestamp.getDay (Time.toWeekday timeZone dateTime))
             , small [ class "date" ] [ text date ]
             , isToday

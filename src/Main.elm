@@ -7,19 +7,28 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Json.Decode as Decode exposing (Value)
 import Page exposing (Page)
+import Page.Day as Day
 import Page.Login as Login
 import Page.Month as Month
 import Page.NotFound as NotFound
 import Page.Week as Week
 import Route exposing (Route)
 import Session exposing (Session)
+import Time
 import Url exposing (Url)
 import Viewer exposing (Viewer)
 import WeekTask exposing (WeekTask)
 
 
-type Model
-    = Week Week.Model
+type alias Model =
+    { appState : AppState
+    , tasks : List WeekTask
+    }
+
+
+type AppState
+    = Day Day.Model
+    | Week Week.Model
     | Login Login.Model
     | Month Month.Model
     | NotFound Session
@@ -32,8 +41,20 @@ type Model
 
 init : Maybe Viewer -> Url -> Nav.Key -> ( Model, Cmd Msg )
 init maybeViewer url navKey =
+    let
+        initTime =
+            Time.millisToPosix 0
+
+        ausZone =
+            Time.customZone 660 []
+    in
     changeRouteTo (Route.fromUrl url)
-        (Redirect (Session.fromViewer navKey maybeViewer))
+        { appState = Redirect (Session.fromViewer navKey maybeViewer)
+        , tasks =
+            [ WeekTask Time.Mon "Get up for uni" initTime WeekTask.Important
+            , WeekTask Time.Tue "Test Weekstart" (Time.millisToPosix 1552093200000) WeekTask.Important
+            ]
+        }
 
 
 
@@ -52,21 +73,24 @@ view model =
             , body = List.map (Html.map toMsg) body
             }
     in
-    case model of
+    case model.appState of
         Redirect _ ->
             viewPage Page.Other (\_ -> Ignored) NotFound.view
 
         NotFound _ ->
             viewPage Page.Other (\_ -> Ignored) NotFound.view
 
-        Week week ->
-            viewPage Page.Week GotWeekMsg (Week.view week)
-
         Login login ->
             viewPage Page.Other GotLoginMsg (Login.view login)
 
+        Day day ->
+            viewPage Page.Day GotDayMsg (Day.view day model.tasks)
+
+        Week week ->
+            viewPage Page.Week GotWeekMsg (Week.view week model.tasks)
+
         Month month ->
-            viewPage Page.Month GotMonthMsg (Month.view month)
+            viewPage Page.Month GotMonthMsg (Month.view month model.tasks)
 
 
 
@@ -78,6 +102,7 @@ type Msg
     | ChangedRoute (Maybe Route)
     | ChangedUrl Url
     | ClickedLink Browser.UrlRequest
+    | GotDayMsg Day.Msg
     | GotWeekMsg Week.Msg
     | GotLoginMsg Login.Msg
     | GotMonthMsg Month.Msg
@@ -86,12 +111,15 @@ type Msg
 
 toSession : Model -> Session
 toSession page =
-    case page of
+    case page.appState of
         Redirect session ->
             session
 
         NotFound session ->
             session
+
+        Day day ->
+            Day.toSession day
 
         Week week ->
             Week.toSession week
@@ -111,27 +139,31 @@ changeRouteTo maybeRoute model =
     in
     case maybeRoute of
         Nothing ->
-            ( NotFound session, Cmd.none )
+            ( { model | appState = NotFound session }, Cmd.none )
 
         Just Route.Root ->
             ( model, Route.replaceUrl (Session.navKey session) Route.Week )
-
-        Just Route.Week ->
-            Week.init session
-                |> updateWith Week GotWeekMsg model
 
         Just Route.Login ->
             Login.init session
                 |> updateWith Login GotLoginMsg model
 
+        Just (Route.Day dayTime) ->
+            Day.init session dayTime model.tasks
+                |> updateWith Day GotDayMsg model
+
+        Just Route.Week ->
+            Week.init session model.tasks
+                |> updateWith Week GotWeekMsg model
+
         Just Route.Month ->
-            Month.init session
+            Month.init session model.tasks
                 |> updateWith Month GotMonthMsg model
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case ( msg, model ) of
+    case ( msg, model.appState ) of
         ( Ignored, _ ) ->
             ( model, Cmd.none )
 
@@ -166,13 +198,17 @@ update msg model =
         ( ChangedRoute route, _ ) ->
             changeRouteTo route model
 
-        ( GotWeekMsg subMsg, Week week ) ->
-            Week.update subMsg week
-                |> updateWith Week GotWeekMsg model
-
         ( GotLoginMsg subMsg, Login login ) ->
             Login.update subMsg login
                 |> updateWith Login GotLoginMsg model
+
+        ( GotDayMsg subMsg, Day day ) ->
+            Day.update subMsg day
+                |> updateWith Day GotDayMsg model
+
+        ( GotWeekMsg subMsg, Week week ) ->
+            Week.update subMsg week
+                |> updateWith Week GotWeekMsg model
 
         ( GotMonthMsg subMsg, Month month ) ->
             Month.update subMsg month
@@ -183,9 +219,24 @@ update msg model =
             ( model, Cmd.none )
 
 
-updateWith : (subModel -> Model) -> (subMsg -> Msg) -> Model -> ( subModel, Cmd subMsg ) -> ( Model, Cmd Msg )
+updateWith : (subModel -> AppState) -> (subMsg -> Msg) -> Model -> ( subModel, Cmd subMsg ) -> ( Model, Cmd Msg )
 updateWith toModel toMsg model ( subModel, subCmd ) =
-    ( toModel subModel
+    let
+        tasks =
+            case toModel subModel of
+                Day day ->
+                    day.tasks
+
+                Week week ->
+                    week.tasks
+
+                Month month ->
+                    month.tasks
+
+                _ ->
+                    model.tasks
+    in
+    ( { model | appState = toModel subModel, tasks = tasks }
     , Cmd.map toMsg subCmd
     )
 
@@ -196,12 +247,15 @@ updateWith toModel toMsg model ( subModel, subCmd ) =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model of
+    case model.appState of
         NotFound _ ->
             Sub.none
 
         Redirect _ ->
             Session.changes GotSession (Session.navKey (toSession model))
+
+        Day day ->
+            Sub.map GotDayMsg (Day.subscriptions day)
 
         Week week ->
             Sub.map GotWeekMsg (Week.subscriptions week)

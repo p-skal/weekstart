@@ -1,9 +1,11 @@
 module Page.Month exposing (Model, Msg(..), init, subscriptions, toSession, update, view)
 
+import Asset exposing (btnIconLeft, btnIconRight)
 import Derberos.Date.Calendar as Calendar
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput)
+import Route
 import Session exposing (Session)
 import Task
 import Time
@@ -34,8 +36,8 @@ type Date
 -- INIT
 
 
-init : Session -> ( Model, Cmd Msg )
-init session =
+init : Session -> List WeekTask -> ( Model, Cmd Msg )
+init session tasks =
     let
         initTime =
             Time.millisToPosix 0
@@ -50,9 +52,7 @@ init session =
       , viewMonthDayPosixTimes = []
       , viewYear = 1970
       , tasks =
-            [ WeekTask Time.Mon "Get up for uni" initTime WeekTask.Important
-            , WeekTask Time.Tue "Test Weekstart" (Time.millisToPosix 1552093200000) WeekTask.Important
-            ]
+            tasks
       }
     , Cmd.batch
         [ Task.perform GotTimeZone Time.here
@@ -65,8 +65,8 @@ init session =
 -- VIEW
 
 
-view : Model -> { title : String, content : Html Msg }
-view model =
+view : Model -> List WeekTask -> { title : String, content : Html Msg }
+view model tasks =
     let
         currentDate =
             Time.toDay model.timeZone model.timeNow
@@ -143,98 +143,94 @@ view model =
             [ section [ class "top" ]
                 [ div [ class "wrapper" ]
                     [ viewPageHeader model
-
-                    --, h1 [] [ text "NEXT: ", text (monthPrevNext (Timestamp.getNextMonthTime model.timeZone firstDayMonth)) ]
                     , div [ class "grid month-grid" ] <|
-                        [ div [ class "grid-day grid-header" ] [ span [ class "day" ] [ text "Sunday" ] ]
-                        , div [ class "grid-day grid-header" ] [ span [ class "day" ] [ text "Monday" ] ]
-                        , div [ class "grid-day grid-header" ] [ span [ class "day" ] [ text "Tuesday" ] ]
-                        , div [ class "grid-day grid-header" ] [ span [ class "day" ] [ text "Wednesday" ] ]
-                        , div [ class "grid-day grid-header" ] [ span [ class "day" ] [ text "Thursday" ] ]
-                        , div [ class "grid-day grid-header" ] [ span [ class "day" ] [ text "Friday" ] ]
-                        , div [ class "grid-day grid-header" ] [ span [ class "day" ] [ text "Saturday" ] ]
-                        ]
-                            ++ List.map
-                                (\p ->
-                                    div [ class "grid-day prev-month", style "backgroundColor" "#eae8dc" ]
-                                        [ span [ class "day" ] [ text <| String.fromInt p ]
-                                        ]
-                                )
-                                (List.reverse <|
-                                    List.take (dayOfWeek (Time.toWeekday model.timeZone firstDayMonth)) <|
-                                        List.drop 3 <|
-                                            List.reverse <|
-                                                List.map (\d -> Time.toDay model.timeZone d) <|
-                                                    Calendar.getCurrentMonthDates model.timeZone (Timestamp.getPrevMonthTime model.timeZone model.timeNow)
-                                )
-                            --(List.range 1 (dayOfWeek (Time.toWeekday model.timeZone firstDayMonth)))
-                            --++ viewPrevMonthDays model model.viewMonth model.viewYear firstDayMonth
-                            ++ viewMonthDays model.timeZone model.timeNow model.viewMonth model.viewYear model.tasks model.viewMonthDayPosixTimes
+                        viewMonthHeader
+                            ++ viewPrevMonthDays model.timeZone model.timeNow firstDayMonth
+                            ++ viewMonthDays model.timeZone model.timeNow model.viewMonth model.viewYear tasks model.viewMonthDayPosixTimes
                     , br [] []
-                    , button [ class "btn btn-primary", onClick <| SwitchedYear (model.viewYear - 1) ] [ text "Prev Year" ]
-                    , button [ class "btn  btn-primary", onClick <| SwitchedYear (model.viewYear + 1) ] [ text "Next Year" ]
-                    , button [ onClick SwitchedPrevMonth ] [ text "Previous Month" ]
-                    , button [ onClick SwitchedNextMonth ] [ text "Next Month" ]
+                    , div [ class "btn-list" ]
+                        [ button [ class "btn btn-secondary", onClick <| SwitchedYear (model.viewYear - 1) ] [ btnIconLeft "angle-left", text "Prev Year" ]
+                        , button [ class "btn btn-secondary", onClick <| SwitchedYear (model.viewYear + 1) ] [ text "Next Year", btnIconRight "angle-right" ]
+                        , div [ style "marginLeft" "auto" ]
+                            [ button [ class "btn btn-primary", onClick SwitchedPrevMonth ] [ btnIconLeft "angle-left", text "Prev Month" ]
+                            , button [ class "btn btn-primary", onClick SwitchedNextMonth ] [ text "Next Month", btnIconRight "angle-right" ]
+                            ]
+                        ]
                     ]
                 ]
             ]
     }
 
 
+
+--, h1 [] [ text "NEXT: ", text (monthPrevNext (Timestamp.getNextMonthTime model.timeZone firstDayMonth)) ]
+
+
+viewMonthHeader : List (Html msg)
+viewMonthHeader =
+    [ div [ class "grid-day grid-header" ] [ span [ class "day" ] [ text "Sunday" ] ]
+    , div [ class "grid-day grid-header" ] [ span [ class "day" ] [ text "Monday" ] ]
+    , div [ class "grid-day grid-header" ] [ span [ class "day" ] [ text "Tuesday" ] ]
+    , div [ class "grid-day grid-header" ] [ span [ class "day" ] [ text "Wednesday" ] ]
+    , div [ class "grid-day grid-header" ] [ span [ class "day" ] [ text "Thursday" ] ]
+    , div [ class "grid-day grid-header" ] [ span [ class "day" ] [ text "Friday" ] ]
+    , div [ class "grid-day grid-header" ] [ span [ class "day" ] [ text "Saturday" ] ]
+    ]
+
+
 viewMonthDays : Time.Zone -> Time.Posix -> Time.Month -> Int -> List WeekTask -> List Time.Posix -> List (Html Msg)
 viewMonthDays timeZone timeNow viewMonth viewYear tasks viewMonthDayPosixTimes =
-    List.map
-        (viewMonthDay
-            timeZone
-            timeNow
-            viewMonth
-            viewYear
-            tasks
-        )
-        viewMonthDayPosixTimes
+    List.map (viewMonthDay timeZone timeNow viewMonth viewYear tasks) viewMonthDayPosixTimes
 
 
 viewMonthDay : Time.Zone -> Time.Posix -> Time.Month -> Int -> List WeekTask -> Time.Posix -> Html Msg
 viewMonthDay timeZone timeNow viewMonth viewYear tasks dateTime =
-    div [ class "grid-day", classList [ ( "today", Time.toDay timeZone timeNow == Time.toDay timeZone dateTime && Time.toYear timeZone timeNow == viewYear && Time.toMonth timeZone timeNow == viewMonth ) ] ]
+    let
+        isToday =
+            if
+                Time.toDay timeZone timeNow
+                    == Time.toDay timeZone dateTime
+                    && Time.toYear timeZone timeNow
+                    == viewYear
+                    && Time.toMonth timeZone timeNow
+                    == viewMonth
+            then
+                True
+
+            else
+                False
+    in
+    a [ class "grid-day", classList [ ( "today", isToday ) ], Route.href (Route.Day dateTime) ]
         [ span [ class "day" ] [ text <| String.fromInt (Time.toDay timeZone dateTime) ]
 
-        --, span [ class "tag" ] [ text <| Timestamp.getDay <| Time.toWeekday timeZone a ]
-        , node "inputgroup"
-            []
-            [ label [] [ text "Enter a task..." ]
-            , input
-                [ class "form-control input"
-                , placeholder "Enter task..."
-                ]
-                []
-            ]
-        , List.filter (\task -> Time.toDay timeZone task.time == Time.toDay timeZone dateTime) tasks
+        {- , node "inputgroup"
+           []
+           [ label [] [ text "Enter a task..." ]
+           , input [ class "form-control input", placeholder "Enter task..." ] []
+           ]
+        -}
+        , tasks
+            |> List.filter (\task -> Time.toDay timeZone task.time == Time.toDay timeZone dateTime)
+            |> List.filter (\task -> Time.toMonth timeZone task.time == Time.toMonth timeZone dateTime)
+            |> List.filter (\task -> Time.toYear timeZone task.time == viewYear)
             |> WeekTask.viewList timeZone timeNow dateTime EditingTask
         ]
 
 
-viewPrevMonthDays : Model -> Time.Month -> Int -> Time.Posix -> List (Html msg)
-viewPrevMonthDays model month year firstDayNextMonth =
-    let
-        preMonth =
-            Timestamp.getMonthFromNumber <| Timestamp.getMonthNumber month - 1
-
-        preMonthNumberOfDays =
-            Timestamp.daysInMonth preMonth year
-
-        preMonthDayPosixTimes =
-            Calendar.getCurrentMonthDates model.timeZone model.timeNow
-
-        firstNextInt =
-            Time.toDay model.timeZone firstDayNextMonth
-    in
+viewPrevMonthDays : Time.Zone -> Time.Posix -> Time.Posix -> List (Html msg)
+viewPrevMonthDays timeZone timeNow firstDayMonth =
     List.map
-        (\d ->
-            div [ class "grid-day" ] [ text (String.fromInt (Time.toDay model.timeZone d)) ]
+        (\p ->
+            div [ class "grid-day prev-month", style "backgroundColor" "#eae8dc" ]
+                [ span [ class "day" ] [ text <| String.fromInt p ]
+                ]
         )
-        (List.drop (preMonthNumberOfDays - firstNextInt)
-            preMonthDayPosixTimes
+        (List.reverse <|
+            List.take (dayOfWeek (Time.toWeekday timeZone firstDayMonth)) <|
+                List.drop 3 <|
+                    List.reverse <|
+                        List.map (\d -> Time.toDay timeZone d) <|
+                            Calendar.getCurrentMonthDates timeZone (Timestamp.getPrevMonthTime timeZone timeNow)
         )
 
 
@@ -308,7 +304,7 @@ viewPageHeader model =
             List.map viewMonth (List.drop 6 monthsOfTheYear)
         , ul [ class "nav" ]
             [ li [ class "nav-trigger" ]
-                [ button [] [ i [ style "marginRight" ".5rem", class "fas fa-bars" ] [], text "Months" ]
+                [ button [] [ btnIconLeft "bars", text "Months" ]
                 ]
             ]
         ]
@@ -326,6 +322,7 @@ type Msg
     | SwitchedPrevMonth
     | SwitchedYear Int
     | EditingTask WeekTask String
+    | Tick Time.Posix
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -447,6 +444,9 @@ update msg model =
             in
             ( { model | tasks = newTasks }, Cmd.none )
 
+        Tick newTime ->
+            ( { model | timeNow = newTime }, Cmd.none )
+
 
 
 -- SUBSCRIPTIONS
@@ -454,7 +454,7 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.none
+    Time.every 1000 Tick
 
 
 
